@@ -1,6 +1,3 @@
-import pandas as pd
-import requests
-
 from download_data import *
 
 ClientKey = 'bqkkv6cfq6ek7zpgiIrCuA=='
@@ -59,14 +56,14 @@ def changeOrder(orderid: int, amount: float, orderPrice: float, orderType: str):
 
 def cancelOrder(orderid: str):
     search = {
-        "AccountKey": AccountKey,
-        "OrderIds": orderid
+        "AccountKey": AccountKey
     }
-    del_order = requests.delete("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
+
+    del_order = requests.delete("https://gateway.saxobank.com/sim/openapi/" + f"trade/v2/orders/{orderid}/",
                                 headers={'Authorization': 'Bearer ' + TOKEN}, params=search)
     out = del_order.json()
     if len(out) != 0:
-        delOrder = out["OrderId"]
+        delOrder = out["Orders"][0]['OrderId']
         print("Order " + delOrder + " deleted successfully!")
         return delOrder
     else:
@@ -81,6 +78,7 @@ class Order:
 
         To change, delete ANY order refer to the methods above.
     """
+
     def __init__(self, amount, uic):
         self.amount = amount
         self.uic = uic
@@ -133,14 +131,13 @@ class Order:
 
     def cancelExistingOrder(self, orderid: str):
         search = {
-            "AccountKey": AccountKey,
-            "OrderIds": orderid
+            "AccountKey": AccountKey
         }
-        del_order = requests.post("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
+        del_order = requests.delete("https://gateway.saxobank.com/sim/openapi/" + f"trade/v2/orders/{orderid}/",
                                     headers={'Authorization': 'Bearer ' + TOKEN}, params=search)
         out = del_order.json()
         if len(out) != 0:
-            delOrder = out["OrderId"]
+            delOrder = out["Orders"][0]['OrderId']
             print("Order " + delOrder + " deleted successfully!")
             return delOrder
         else:
