@@ -3,7 +3,7 @@ import plotly.offline as pyo
 from download_data import *
 
 
-def candlestick(df: pd.DataFrame):
+def candlestick(df: pd.DataFrame, title: str):
     """
         Definition
         ----------
@@ -13,6 +13,7 @@ def candlestick(df: pd.DataFrame):
         Parameters
         ----------
         df: pd.Dataframe
+        title: the title to the graph.
 
 
         Return
@@ -49,6 +50,7 @@ def candlestick(df: pd.DataFrame):
     fig['layout']['yaxis2'] = dict(domain=[0.2, 0.8])
     fig['layout']['legend'] = dict(orientation='h', y=0.9, x=0.3, yanchor='bottom')
     fig['layout']['margin'] = dict(t=40, b=40, r=40, l=40)
+    fig['layout']['title'] = title
 
     # Add range button
     rangeselector = dict(

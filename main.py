@@ -7,31 +7,37 @@ begin = getFromApi("FxSpot", 'EUR', True, 'EURUSD', 'EURRUB', 'XAUEUR', 15)
 # Get UCIs symbols for each pair
 info = begin.getUCI()
 
-# Download forex data using the UCI
-
 ## normalized data for charts and comparison
 forexData = begin.downloadData()
 
-### Extracting the Close, High, Low and Open for the candlestick.
-XAUEUR = begin.BidAskCloseOpen[['Time', 'XAUEUR_CloseMid', 'XAUEUR_HighMid', 'XAUEUR_LowMid', 'XAUEUR_OpenMid']]
-XAUEUR = XAUEUR.rename(
-    columns={'XAUEUR_CloseMid': 'Close', 'XAUEUR_HighMid': 'High', 'XAUEUR_LowMid': 'Low', 'XAUEUR_OpenMid': 'Open'})
+prova = begin.downloaded_data.json()
+fx = pd.DataFrame.from_dict(prova["Data"])
+fx["Symbol"] = info.Symbol[0]
+fx["CloseMid"] = (fx["CloseAsk"] + fx["CloseBid"]) / 2
+fx["HighMid"] = (fx["HighAsk"] + fx["HighBid"]) / 2
+fx["LowMid"] = (fx["LowAsk"] + fx["LowBid"]) / 2
+fx["OpenMid"] = (fx["OpenAsk"] + fx["OpenBid"]) / 2
+fx = fx[["Time", "Symbol", "CloseMid", "OpenMid", "HighMid", "LowMid"]]
+latest_fx = {fx["Symbol"][0]: []}
 
-EURRUB = begin.BidAskCloseOpen[['Time', 'EURRUB_CloseMid', 'EURRUB_HighMid', 'EURRUB_LowMid', 'EURRUB_OpenMid']]
-EURRUB = EURRUB.rename(
-    columns={'EURRUB_CloseMid': 'Close', 'EURRUB_HighMid': 'High', 'EURRUB_LowMid': 'Low', 'EURRUB_OpenMid': 'Open'})
 
-EURUSD = begin.BidAskCloseOpen[['Time', 'EURUSD_CloseMid', 'EURUSD_HighMid', 'EURUSD_LowMid', 'EURUSD_OpenMid']]
-EURUSD = EURUSD.rename(
-    columns={'EURUSD_CloseMid': 'Close', 'EURUSD_HighMid': 'High', 'EURUSD_LowMid': 'Low', 'EURUSD_OpenMid': 'Open'})
+def fake(symbol):
+    """
+    :param symbol: The ticker or FX pair of interest.
+    :return: Returns the latest bar from the data feed.
+    """
+    yield fx[-1:]
+
+
+a = fake(fx.Symbol)
 
 # Plot the forex overview
 forex_overview = begin.getGraph()
 
 # plot the candlestick
-eurusd = candlestick(EURUSD)
-eurrub = candlestick(EURRUB)
-xaueur = candlestick(XAUEUR)
+eurusd = candlestick(begin.EURUSD, 'EURUSD spot, 15min')
+eurrub = candlestick(begin.EURRUB, 'EURRUB spot, 15min')
+xaueur = candlestick(begin.XAUEUR, 'XAUEUR Spot, 15min')
 
 # correlation
 

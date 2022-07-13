@@ -1,17 +1,17 @@
-import websocket, requests, secrets, json
-import pandas as pd
-import plotly.graph_objects as go
-import plotly.express as px
 import numpy as np
-from pprint import pprint
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import requests
+import secrets
 from plotly.subplots import make_subplots
 
 # copy your (24-hour) token here
-TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJ" \
-        "vYWEiOiI3Nzc3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoiYnFra3Y2Y2ZxNmVrN3pwZ2lJckN1QT09IiwiY2l" \
-        "kIjoiYnFra3Y2Y2ZxNmVrN3pwZ2lJckN1QT09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiZDFhNTNiY2QxZjg4" \
-        "NGZjODk2YTg0MmQxYmRjOTE1MmYiLCJkZ2kiOiI4NCIsImV4cCI6IjE2NTE3MDE4NjgiLCJvYWwiOiIxRiJ9.WW0_j2ZJgt9d5tCQ2FgN" \
-        "xxZWWGuNAfcj6JGEZ-ytx1EQoNaRYWY_cuiA2DUu968Irfi85savqrNTpO-0uI_2Jg"
+TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJvYWE" \
+        "iOiI3Nzc3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoidkpTOWg4d2t4ZDdhM1lySkY5Zm80dz09IiwiY2lkIjoid" \
+        "kpTOWg4d2t4ZDdhM1lySkY5Zm80dz09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiNDQ2NTRlNDg4NGJhNDI1MT" \
+        "k4ZWE1YTU3OTNiMGRkNjgiLCJkZ2kiOiI4NCIsImV4cCI6IjE2NTcxNDAzNDIiLCJvYWwiOiIxRiJ9.i-17xHN1Rr7yZC19fq1ADCGdO4" \
+        "laLDDwVh1j6J5JHj6tWBcFyzfKNB7Kx_2PQQpBOevzob8STyiQmBC9tsciyQ"
 
 # create a random string for context ID and reference ID
 CONTEXT_ID = secrets.token_urlsafe(10)
@@ -67,8 +67,11 @@ class getFromApi:
         self.extract_fx_final = pd.DataFrame()
         self.params_fx_spot = None
         self.horizon = horizon
-        self.download_data = None
+        self.downloaded_data = None
         self.BidAskCloseOpen = pd.DataFrame()
+        self.EURUSD = pd.DataFrame()
+        self.XAUEUR = pd.DataFrame()
+        self.EURRUB = pd.DataFrame()
         # self.palle = pd.DataFrame()
 
     def getUCI(self) -> pd.DataFrame:
@@ -118,16 +121,17 @@ class getFromApi:
 
         """
         rel_info = self.rel_info
+
         for i in range(len(rel_info.Symbol)):
             self.params_fx_spot = {
                 "AssetType": self.assettype,
                 "Horizon": self.horizon,
                 "Uic": rel_info.Identifier[i]
             }
-            self.download_data = requests.get("https://gateway.saxobank.com/sim/openapi/" + "chart/v1/charts",
-                                              params=self.params_fx_spot,
-                                              headers={'Authorization': 'Bearer ' + TOKEN})
-            fx_pair = self.download_data.json()
+            self.downloaded_data = requests.get("https://gateway.saxobank.com/sim/openapi/" + "chart/v1/charts",
+                                                params=self.params_fx_spot,
+                                                headers={'Authorization': 'Bearer ' + TOKEN})
+            fx_pair = self.downloaded_data.json()
             # self.palle = pd.DataFrame.from_dict(fx_pair["Data"])
             df_fx = pd.DataFrame.from_dict(fx_pair["Data"])
 
@@ -167,6 +171,20 @@ class getFromApi:
                                     suffixes=('', '_remove'))
             self.fx_data.drop([i for i in self.fx_data.columns if 'remove' in i], axis=1, inplace=True)
 
+        self.XAUEUR = self.BidAskCloseOpen[['Time', 'XAUEUR_CloseMid', 'XAUEUR_HighMid', 'XAUEUR_LowMid',
+                                            'XAUEUR_OpenMid']]
+        self.XAUEUR = self.XAUEUR.rename(columns={'XAUEUR_CloseMid': 'Close', 'XAUEUR_HighMid': 'High',
+                                                  'XAUEUR_LowMid': 'Low', 'XAUEUR_OpenMid': 'Open'})
+
+        self.EURRUB = self.BidAskCloseOpen[['Time', 'EURRUB_CloseMid', 'EURRUB_HighMid', 'EURRUB_LowMid',
+                                            'EURRUB_OpenMid']]
+        self.EURRUB = self.EURRUB.rename(columns={'EURRUB_CloseMid': 'Close', 'EURRUB_HighMid': 'High',
+                                                  'EURRUB_LowMid': 'Low', 'EURRUB_OpenMid': 'Open'})
+
+        self.EURUSD = self.BidAskCloseOpen[['Time', 'EURUSD_CloseMid', 'EURUSD_HighMid', 'EURUSD_LowMid',
+                                            'EURUSD_OpenMid']]
+        self.EURUSD = self.EURUSD.rename(columns={'EURUSD_CloseMid': 'Close', 'EURUSD_HighMid': 'High',
+                                                  'EURUSD_LowMid': 'Low', 'EURUSD_OpenMid': 'Open'})
         self.fx_data = self.fx_data[
             ["Time", rel_info.Symbol[0] + '_N', rel_info.Symbol[1] + '_N', rel_info.Symbol[2] + '_N']]
 
