@@ -8,7 +8,7 @@ begin = getFromApi("FxSpot", 'EUR', True, 'EURUSD', 'EURRUB', 'XAUEUR', 15)
 info = begin.getUCI()
 
 ## normalized data for charts and comparison
-forexData = begin.downloadData()
+forexData = begin.downloadData
 
 prova = begin.downloaded_data.json()
 fx = pd.DataFrame.from_dict(prova["Data"])
@@ -23,7 +23,7 @@ latest_fx = {fx["Symbol"][0]: []}
 
 def fake(symbol):
     """
-    :param symbol: The ticker or FX pair of interest.
+    param symbol: The ticker or FX pair of interest.
     :return: Returns the latest bar from the data feed.
     """
     yield fx[-1:]

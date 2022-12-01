@@ -7,11 +7,11 @@ import secrets
 from plotly.subplots import make_subplots
 
 # copy your (24-hour) token here
-TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJvYWE" \
-        "iOiI3Nzc3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoidkpTOWg4d2t4ZDdhM1lySkY5Zm80dz09IiwiY2lkIjoid" \
-        "kpTOWg4d2t4ZDdhM1lySkY5Zm80dz09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiNDQ2NTRlNDg4NGJhNDI1MT" \
-        "k4ZWE1YTU3OTNiMGRkNjgiLCJkZ2kiOiI4NCIsImV4cCI6IjE2NTcxNDAzNDIiLCJvYWwiOiIxRiJ9.i-17xHN1Rr7yZC19fq1ADCGdO4" \
-        "laLDDwVh1j6J5JHj6tWBcFyzfKNB7Kx_2PQQpBOevzob8STyiQmBC9tsciyQ"
+TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJvYWEiO" \
+        "iI3Nzc3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoiWXw0VDl3Rk1HVzZrQ2cwME5WWTJ6QT09IiwiY2lkIjoiWXw0V" \
+        "Dl3Rk1HVzZrQ2cwME5WWTJ6QT09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiNGJjY2JmNzNhNWEyNGNmY2ExOGIw" \
+        "NmFjYWE4MDkxZTciLCJkZ2kiOiI4NCIsImV4cCI6IjE2Njg3MTkxNDYiLCJvYWwiOiIxRiIsImlpZCI6IjBjZWQxYWZjYjFiYTQxM2Q1Mz" \
+        "EyMDhkYWM3YzFlZjI4In0.mrjrbhkoyya_BbD4FIhfM2KsC0FZawFGVOfeE-sHWs1rgYlpJgAxh_WSFv5LYrxXn-dsTeKLh3kM3Nq6ssMnPg"
 
 # create a random string for context ID and reference ID
 CONTEXT_ID = secrets.token_urlsafe(10)
@@ -92,9 +92,9 @@ class getFromApi:
 
         """
         self.search = {
-            "AssetTypes": self.assettype,
+            "AssetTypes": self.asset_type,
             "Keywords": self.keyword,
-            "IncludeNonTradable": self.isnontradable
+            "IncludeNonTradable": self.is_nontradable
         }
         self.uci = requests.get("https://gateway.saxobank.com/sim/openapi/" + "ref/v1/instruments", params=self.search,
                                 headers={'Authorization': 'Bearer ' + TOKEN})
@@ -103,6 +103,7 @@ class getFromApi:
         self.rel_info = info[info.Symbol.isin([self.pair1, self.pair2, self.pair3])].reset_index(drop=True)
         return self.rel_info
 
+    @property
     def downloadData(self) -> pd.DataFrame:
         """
             Definition
@@ -124,7 +125,7 @@ class getFromApi:
 
         for i in range(len(rel_info.Symbol)):
             self.params_fx_spot = {
-                "AssetType": self.assettype,
+                "AssetType": self.asset_type,
                 "Horizon": self.horizon,
                 "Uic": rel_info.Identifier[i]
             }
