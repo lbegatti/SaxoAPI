@@ -43,7 +43,7 @@ class getFromApi:
             isnontradable: bool, necessary to filter those which are also not tradable.
             pair1: str, first FX pair of interest.
             pair2: str, second FX pair of interest.
-            pair3: str, thir FX pair of interest.
+            pair3: str, this FX pair of interest.
             horizon: int, the frequency of the data. For instance if horizon=15 then it is a
                 15min frequency for the data under observation.
 
@@ -72,7 +72,6 @@ class getFromApi:
         self.EURUSD = pd.DataFrame()
         self.XAUEUR = pd.DataFrame()
         self.EURRUB = pd.DataFrame()
-        # self.palle = pd.DataFrame()
 
     def getUCI(self) -> pd.DataFrame:
         """
@@ -121,13 +120,22 @@ class getFromApi:
             pd.Dataframe with the relevant information of the FX pairs.
 
         """
-        rel_info = self.rel_info
+        self.search = {
+            "AssetTypes": self.asset_type,
+            "Keywords": self.keyword,
+            "IncludeNonTradable": self.is_nontradable
+        }
+        self.uci = requests.get("https://gateway.saxobank.com/sim/openapi/" + "ref/v1/instruments", params=self.search,
+                                headers={'Authorization': 'Bearer ' + TOKEN})
+        searchOutput = self.uci.json()
+        info = pd.DataFrame.from_dict(searchOutput["Data"])
+        self.rel_info = info[info.Symbol.isin([self.pair1, self.pair2, self.pair3])].reset_index(drop=True)
 
-        for i in range(len(rel_info.Symbol)):
+        for i in range(len(self.rel_info.Symbol)):
             self.params_fx_spot = {
                 "AssetType": self.asset_type,
                 "Horizon": self.horizon,
-                "Uic": rel_info.Identifier[i]
+                "Uic": self.rel_info.Identifier[i]
             }
             self.downloaded_data = requests.get("https://gateway.saxobank.com/sim/openapi/" + "chart/v1/charts",
                                                 params=self.params_fx_spot,
@@ -138,17 +146,17 @@ class getFromApi:
 
             # Close, High, Low, Open price info for the candlestick
             candlestick_data = df_fx.copy()
-            candlestick_data[rel_info.Symbol[i] + "_CloseMid"] = (candlestick_data["CloseAsk"] +
-                                                                  candlestick_data["CloseBid"]) / 2
-            candlestick_data[rel_info.Symbol[i] + "_HighMid"] = (candlestick_data["HighAsk"] +
-                                                                 candlestick_data["HighBid"]) / 2
-            candlestick_data[rel_info.Symbol[i] + "_LowMid"] = (candlestick_data["LowAsk"] +
-                                                                candlestick_data["LowBid"]) / 2
-            candlestick_data[rel_info.Symbol[i] + "_OpenMid"] = (candlestick_data["OpenAsk"] +
-                                                                 candlestick_data["OpenBid"]) / 2
+            candlestick_data[self.rel_info.Symbol[i] + "_CloseMid"] = (candlestick_data["CloseAsk"] +
+                                                                       candlestick_data["CloseBid"]) / 2
+            candlestick_data[self.rel_info.Symbol[i] + "_HighMid"] = (candlestick_data["HighAsk"] +
+                                                                      candlestick_data["HighBid"]) / 2
+            candlestick_data[self.rel_info.Symbol[i] + "_LowMid"] = (candlestick_data["LowAsk"] +
+                                                                     candlestick_data["LowBid"]) / 2
+            candlestick_data[self.rel_info.Symbol[i] + "_OpenMid"] = (candlestick_data["OpenAsk"] +
+                                                                      candlestick_data["OpenBid"]) / 2
             candlestick_data = candlestick_data[
-                ["Time", rel_info.Symbol[i] + "_CloseMid", rel_info.Symbol[i] + "_HighMid",
-                 rel_info.Symbol[i] + "_LowMid", rel_info.Symbol[i] + "_OpenMid"]]
+                ["Time", self.rel_info.Symbol[i] + "_CloseMid", self.rel_info.Symbol[i] + "_HighMid",
+                 self.rel_info.Symbol[i] + "_LowMid", self.rel_info.Symbol[i] + "_OpenMid"]]
             self.BidAskCloseOpen = pd.merge(candlestick_data, self.BidAskCloseOpen, how='outer', left_index=True,
                                             right_index=True, suffixes=('', '_remove'))
             self.BidAskCloseOpen.drop([i for i in self.BidAskCloseOpen.columns if 'remove' in i], axis=1, inplace=True)
@@ -161,13 +169,13 @@ class getFromApi:
             self.extract_fx = pd.merge(df_fx, self.extract_fx, how='outer', left_index=True, right_index=True,
                                        suffixes=('', '_remove'))
             self.extract_fx.drop([i for i in self.extract_fx.columns if 'remove' in i], axis=1, inplace=True)
-            self.extract_fx.rename(columns={'CloseBid': rel_info.Symbol[i]}, inplace=True)
+            self.extract_fx.rename(columns={'CloseBid': self.rel_info.Symbol[i]}, inplace=True)
 
-            df_fx['Symbol'] = rel_info.loc[rel_info['Symbol'] == rel_info.Symbol[i], 'Symbol'].iloc[0]
+            df_fx['Symbol'] = self.rel_info.loc[self.rel_info['Symbol'] == self.rel_info.Symbol[i], 'Symbol'].iloc[0]
 
-            df_fx[rel_info.Symbol[i] + '_N'] = (df_fx['CloseBid'] - np.mean(df_fx['CloseBid'])) / (
+            df_fx[self.rel_info.Symbol[i] + '_N'] = (df_fx['CloseBid'] - np.mean(df_fx['CloseBid'])) / (
                 np.std(df_fx['CloseBid']))
-            df_fx = df_fx[["Time", rel_info.Symbol[i] + '_N']]
+            df_fx = df_fx[["Time", self.rel_info.Symbol[i] + '_N']]
             self.fx_data = pd.merge(df_fx, self.fx_data, how='outer', left_index=True, right_index=True,
                                     suffixes=('', '_remove'))
             self.fx_data.drop([i for i in self.fx_data.columns if 'remove' in i], axis=1, inplace=True)
@@ -187,7 +195,7 @@ class getFromApi:
         self.EURUSD = self.EURUSD.rename(columns={'EURUSD_CloseMid': 'Close', 'EURUSD_HighMid': 'High',
                                                   'EURUSD_LowMid': 'Low', 'EURUSD_OpenMid': 'Open'})
         self.fx_data = self.fx_data[
-            ["Time", rel_info.Symbol[0] + '_N', rel_info.Symbol[1] + '_N', rel_info.Symbol[2] + '_N']]
+            ["Time", self.rel_info.Symbol[0] + '_N', self.rel_info.Symbol[1] + '_N', self.rel_info.Symbol[2] + '_N']]
 
         # first pair MAs 15d - 75d - 200d
         self.fx_data['MA_15d_' + self.fx_data.columns[1]] = self.fx_data.iloc[:, 1].rolling(window=15).mean()

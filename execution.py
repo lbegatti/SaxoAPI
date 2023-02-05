@@ -30,7 +30,7 @@ class SimulatedExecutionHandler(ExecutionHandler):
     ARCA is the exchange used for the simulation.
     """
 
-    def __int__(self, events):
+    def __init__(self, events):
         """
         Initialize the handler, setting up the events queues.
         events: the Queue of Event objects

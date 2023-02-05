@@ -10,19 +10,19 @@ class Backtest(object):
     Contains the settings and components for carrying out an event-driven backtest.
     """
 
-    def __int__(self, api, symbol_list, initial_capital, heartbeat, start_date, data_handler, execution_handler,
-                portfolio, strategy):
-        """
+    def __init__(self, api, symbol_list, initial_capital, heartbeat, start_date, data_handler, execution_handler,
+                 portfolio, strategy):
 
-        api: the data from the API you are using.
-        symbol_list: the list of symbols.
-        initial_capital: The starting capital
-        heartbeat: time of "refresh" for the whole backtesting.
-        start_date: The start date of the strategy.
-        data_handler: (Class) Handles the market data feed.
-        execution_handler: (Class) Handles the orders/fills for trades.
-        portfolio: (Class) Keeps track of portfolio current and prior positions.
-        strategy: (Class) Generates signals based on market data.
+        """
+            api: the data for the backsting (Yahoo in this case).
+            symbol_list: the list of symbols.
+            initial_capital: The starting capital
+            heartbeat: time of "refresh" for the whole backtesting.
+            start_date: The start date of the strategy.
+            data_handler: (Class) Handles the market data feed.
+            execution_handler: (Class) Handles the orders/fills for trades.
+            portfolio: (Class) Keeps track of portfolio current and prior positions.
+            strategy: (Class) Generates signals based on market data.
         """
         self.api = api
         self.symbol_list = symbol_list

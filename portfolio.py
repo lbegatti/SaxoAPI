@@ -23,11 +23,12 @@ class Portfolio(object):
     The holding DataFrame stores the cash and total market holdings value of each symbol for
     a particular time-index, as well as the percentage change in portfolio total across bars.
     """
-    def __int__(self, bars, events, start_date, initial_capital=1000000.0):
-        """Initializes the portfolio with bars and an event queue. It also
+
+    def __init__(self, bars, events, start_date, initial_capital=1000000.0):
+        """
+        Initializes the portfolio with bars and an event queue. It also
         includes a starting datetime index and initial capital unless otherwise stated.
         In saxo in the demo account it should be EUR 1,000,000.
-
         bars: The DataHandler object with current market data.
         events: The Event Queue object.
         start_date: The start date (bar) of the portfolio.
@@ -35,25 +36,22 @@ class Portfolio(object):
         """
         self.bars = bars
         self.events = events
-        # self.symbol_list = self.bars.symbol_list
-        self.symbol = self.bars.symbol
+        self.symbol_list = self.bars.symbol_list
         self.start_date = start_date
         self.initial_capital = initial_capital
 
         self.all_positions = self.construct_all_positions()
-        self.current_positions = dict((k, v) for k, v in [(s, 0) for s in self.symbol])
+        self.current_positions = dict((k, v) for k, v in [(s, 0) for s in self.symbol_list])
 
         self.all_holdings = self.construct_all_holdings()
         self.current_holdings = self.construct_current_holdings()
         self.fx_curve = None
 
-        pass
-
     def construct_all_positions(self):
         """
         Constructs the positions list using the start_date to determine when the time index will begin.
         """
-        d = dict((k, v) for k, v in [(s, 0) for s in self.symbol])
+        d = dict((k, v) for k, v in [(s, 0) for s in self.symbol_list])
         # d['datetime'] = self.start_date
         d["Time"] = self.start_date
         return [d]
@@ -63,7 +61,7 @@ class Portfolio(object):
         Construct the holdings list using the start_date
         to determine when the time index will begin.
         """
-        d = dict((k, v) for k, v in [(s, 0.0) for s in self.symbol])
+        d = dict((k, v) for k, v in [(s, 0.0) for s in self.symbol_list])
         d["Time"] = self.start_date
         d["cash"] = self.initial_capital
         d["commission"] = 0.0
@@ -71,7 +69,7 @@ class Portfolio(object):
         return [d]
 
     def construct_current_holdings(self):
-        d = dict((k, v) for k, v in [(s, 0.0) for s in self.symbol])
+        d = dict((k, v) for k, v in [(s, 0.0) for s in self.symbol_list])
         d["Time"] = self.start_date
         d["cash"] = self.initial_capital
         d["commission"] = 0.0
@@ -87,27 +85,28 @@ class Portfolio(object):
         param event: from MarketEvent
         return:
         """
-        latest_datetime = self.bars.get_latest_bar_datetime(self.symbol[0])
+        latest_datetime = self.bars.get_latest_bar_datetime(self.symbol_list[0])
 
         ## update positions
-        dp = dict((k, v) for k, v in [(s, 0) for s in self.symbol])
+        dp = dict((k, v) for k, v in [(s, 0) for s in self.symbol_list])
         dp['Time'] = latest_datetime
 
-        dp[self.symbol] = self.current_positions[self.symbol]
-
-        # append current positions
+        for s in self.symbol_list:
+            dp[s] = self.current_positions[s]
+        # Append the current positions
         self.all_positions.append(dp)
 
         # update holdings
-        dh = dict((k, v) for k, v in [(s, 0) for s in self.symbol])
+        dh = dict((k, v) for k, v in [(s, 0) for s in self.symbol_list])
         dh["Time"] = latest_datetime
         dh["cash"] = self.current_holdings['cash']
         dh["commission"] = self.current_holdings['commission']
         dh["total"] = self.current_holdings['cash']
 
-        market_value = self.current_positions[self.symbol] * self.bars.get_latest_bar_value(self.symbol, "CloseMid")
-        dh[self.symbol] = market_value
-        dh["total"] += market_value
+        for s in self.symbol_list:
+            market_value = self.current_positions[s] * self.bars.get_latest_bar_value(s, "Adj Close")
+            dh[s] = market_value
+            dh["total"] += market_value
 
         # append the current holdings
         self.all_holdings.append(dh)
@@ -172,7 +171,7 @@ class Portfolio(object):
         strength = signal.strength
 
         mkt_quantity = 10000  # 10,000 of the currency (it can be adjusted obviously)
-        cur_quantity = self.current_positions[self.symbol]
+        cur_quantity = self.current_positions[symbol]
         order_type = "Market"
 
         if direction == "LONG" and cur_quantity == 0:

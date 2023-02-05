@@ -10,11 +10,11 @@ from event import MarketEvent
 # copy your (24-hour) token here
 import requests
 
-TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJvYWEiO" \
-        "iI3Nzc3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoiWXw0VDl3Rk1HVzZrQ2cwME5WWTJ6QT09IiwiY2lkIjoiWXw0V" \
-        "Dl3Rk1HVzZrQ2cwME5WWTJ6QT09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiNGJjY2JmNzNhNWEyNGNmY2ExOGIw" \
-        "NmFjYWE4MDkxZTciLCJkZ2kiOiI4NCIsImV4cCI6IjE2Njg3MTkxNDYiLCJvYWwiOiIxRiIsImlpZCI6IjBjZWQxYWZjYjFiYTQxM2Q1MzE" \
-        "yMDhkYWM3YzFlZjI4In0.mrjrbhkoyya_BbD4FIhfM2KsC0FZawFGVOfeE-sHWs1rgYlpJgAxh_WSFv5LYrxXn-dsTeKLh3kM3Nq6ssMnPg"
+TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJvYWEiOiI3Nz" \
+        "c3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoiYVFrdHF2WC04UEdudzJQZWIzc0VLZz09IiwiY2lkIjoiYVFrdHF2WC04U" \
+        "EdudzJQZWIzc0VLZz09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiOTcwYTIzNzkwMTY2NDBhMDkwNmQ3OGJhMWEyOWV" \
+        "iNDEiLCJkZ2kiOiI4NCIsImV4cCI6IjE2ODMwNjQzOTMiLCJvYWwiOiIxRiIsImlpZCI6ImQ0OGE2YWNkMjUzNTQzNjU5YTA4MDhkYWVmZTZi" \
+        "YzRmIn0.A0bN9apuvICgCMZ2SRM6cJnxhTr84Zv2LsjvV6WEUziu8rqyFdziaIgnqchQIp-dCyWx2yUaBpqEDdCieX8sTg"
 
 # create a random string for context ID and reference ID
 CONTEXT_ID = secrets.token_urlsafe(10)
@@ -85,13 +85,12 @@ class DataHandler(object):
         raise NotImplementedError("Should implement update_bars()")
 
 
-class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its abstracts methods.
+class HistoricDataHandler(DataHandler):  # it inherits from DataHandler with its abstracts methods.
     """
     Python Class for getting data from the SaxoOpenAPI.
     """
 
-    def __init__(self, events, asset_type: str, keyword: str, is_nontradable: bool, symbol,
-                 horizon: int):
+    def __init__(self, events, api, symbol_list):
         """
             Definition
             ----------
@@ -100,12 +99,7 @@ class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its 
             Parameters
             ----------
             events: The Event Queue.
-            asset_type: str, 'FxSpot'. Since it is a demo account.
-            keyword: str to help filter among the currencies.
-            is_nontradable: bool, necessary to filter those which are also not tradable.
-            symbol: str, first FX pair of interest.
-            horizon: int, the frequency of the data. For instance if horizon=15 then it is a
-                15min frequency for the data under observation.
+            symbol_list: str, first FX pair of interest.
 
             Return
             ------
@@ -113,85 +107,42 @@ class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its 
 
         """
         self.events = events
-        self.search = None
-        self.asset_type = asset_type
-        self.keyword = keyword
-        self.is_nontradable = is_nontradable
-        self.symbol = symbol
-        self.uci = None
-        self.rel_info = None
-        self.params_fx_spot = None
-        self.horizon = horizon
-        self.download_data = None
+        self.symbol_list = symbol_list
         self.symbol_data = {}
+        self.api = api
         self.latest_symbol_data = {}
-        self.continued_backtest = True
+        self.continue_backtest = True
 
-    def getUCI(self) -> pd.DataFrame:
-        """
-            Definition
-            ----------
-            Python method to get the info for each currency of interest.
+        self.yahooData()
 
-
-            Parameters
-            ----------
-            self: the instance of the class.
-
-
-            Return
-            ------
-            pd.Dataframe with the relevant info to identify the FX pairs of interest.
-
-        """
-        self.search = {
-            "AssetTypes": self.asset_type,
-            "Keywords": self.keyword,
-            "IncludeNonTradable": self.is_nontradable
-        }
-        self.uci = requests.get("https://gateway.saxobank.com/sim/openapi/" + "ref/v1/instruments", params=self.search,
-                                headers={'Authorization': 'Bearer ' + TOKEN})
-        searchOutput = self.uci.json()
-        info = pd.DataFrame.from_dict(searchOutput["Data"])
-        self.rel_info = info[info.Symbol.isin([self.symbol])].reset_index(drop=True)
-        return self.rel_info
-
-    def downloadData(self):
-
-        rel_info = self.rel_info
-
-        self.params_fx_spot = {
-            "AssetType": self.asset_type,
-            "Horizon": self.horizon,
-            "Uic": rel_info.Identifier
-        }
-        self.download_data = requests.get("https://gateway.saxobank.com/sim/openapi/" + "chart/v1/charts",
-                                          params=self.params_fx_spot, headers={'Authorization': 'Bearer ' + TOKEN})
-        fx_pair = self.download_data.json()
-        df_fx = pd.DataFrame.from_dict(fx_pair["Data"])
-
-        # Close, High, Low, Open price info for the candlestick
-        self.symbol_data = df_fx.copy()
-        self.symbol_data["Symbol"] = rel_info.Symbol
-        self.symbol_data["CloseMid"] = (self.symbol_data["CloseAsk"] + self.symbol_data["CloseBid"]) / 2
-        self.symbol_data["HighMid"] = (self.symbol_data["HighAsk"] + self.symbol_data["HighBid"]) / 2
-        self.symbol_data["LowMid"] = (self.symbol_data["LowAsk"] + self.symbol_data["LowBid"]) / 2
-        self.symbol_data["OpenMid"] = (self.symbol_data["OpenAsk"] + self.symbol_data["OpenBid"]) / 2
-        self.symbol_data = self.symbol_data[["Time", "Symbol", "OpenMid", "CloseMid", "HighMid", "LowMid"]]
+    def yahooData(self):
 
         # set the latest symbol data to None (so it can be loaded afterwords)
-        self.latest_symbol_data[self.symbol_data.Symbol[0]] = []
 
-        return self.symbol_data
+        comb_index = None
+
+        for s in self.symbol_list:
+            # Combine the index to pad forward values
+            self.symbol_data[s] = self.api.sort_index(ascending=False)
+            if comb_index is None:
+                comb_index = self.symbol_data[s].index
+            else:
+                comb_index.union(self.symbol_data[s].index)
+
+            self.latest_symbol_data[s] = []
+
+        # reindex the dataframe
+        for s in self.symbol_list:
+            self.symbol_data[s] = self.symbol_data[s].reindex(index=comb_index, method='pad').iterrows()
 
     def _get_new_bar(self, symbol):
         """
         param symbol: The ticker or FX pair of interest.
         return: Returns the latest bar from the data feed.
         """
-        yield self.symbol_data[-1:]
-        # for s in self.symbol_data[symbol]:
-        #    yield s
+        # yield self.symbol_data[-1:]
+        for s in self.symbol_data[symbol]:
+            yield s
 
     def get_latest_bar(self, symbol):
         """
@@ -199,7 +150,7 @@ class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its 
         return:
         """
         try:
-            bars_list = self.latest_symbol_data[self.symbol]
+            bars_list = self.latest_symbol_data[symbol]
         except KeyError:
             print("That symbol is not available from Saxo API.")
             raise
@@ -211,7 +162,7 @@ class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its 
         return: returns the last N bars from the latest_symbol list, or N-k if less available.
         """
         try:
-            bars_list = self.latest_symbol_data[self.symbol]
+            bars_list = self.latest_symbol_data[symbol]
         except KeyError:
             print("That symbol is not available in the historical data set")
             raise
@@ -224,7 +175,7 @@ class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its 
         return: a python datetime object for the last bar.
         """
         try:
-            bars_list = self.latest_symbol_data[self.symbol]
+            bars_list = self.latest_symbol_data[symbol]
         except KeyError:
             print("That symbol is not available in the historical data set.")
             raise
@@ -238,7 +189,7 @@ class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its 
         return: returns values from the pandas object.
         """
         try:
-            bars_list = self.latest_symbol_data[self.symbol]
+            bars_list = self.latest_symbol_data[symbol]
         except KeyError:
             print("That symbol is not available in the historical data set.")
             raise
@@ -253,7 +204,7 @@ class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its 
         return: the last N bars values of the symbol (or symbol list), or N-k if less available.
         """
         try:
-            bars_list = self.get_latest_bars(self.symbol, N)
+            bars_list = self.get_latest_bars(symbol, N)
         except KeyError:
             print("That symbol is not available in the historical data set.")
             raise
@@ -265,14 +216,15 @@ class SaxoAPIDataHandler(DataHandler):  # it inherits from DataHandler with its 
     def update_bars(self):
         """
         return: pushes the latest bar to the latest_symbol_data structure
-        for all symbols in the symbol list (so far no list so only one symbol)
+        for all symbols in the symbol list.
         """
-        # we have only the EURUSD for now, as a symbol not a list...
-        try:
-            bar = next(self._get_new_bar(self.symbol))
-        except StopIteration:
-            self.continued_backtest = False
-        else:
-            if bar is not None:
-                self.latest_symbol_data[self.symbol].append(bar)
+
+        for s in self.symbol_list:
+            try:
+                bar = next(self._get_new_bar(s))
+            except StopIteration:
+                self.continue_backtest = False
+            else:
+                if bar is not None:
+                    self.latest_symbol_data[s].append(bar)
         self.events.put(MarketEvent())  # this put() adds elements (events) to the queue

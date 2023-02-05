@@ -1,50 +1,93 @@
-from orders import *
-from charts import *
+from __future__ import print_function
+import datetime
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+import yfinance as yf
 
-# Initialize the class getFromApi()
-begin = getFromApi("FxSpot", 'EUR', True, 'EURUSD', 'EURRUB', 'XAUEUR', 15)
-
-# Get UCIs symbols for each pair
-info = begin.getUCI()
-
-## normalized data for charts and comparison
-forexData = begin.downloadData
-
-prova = begin.downloaded_data.json()
-fx = pd.DataFrame.from_dict(prova["Data"])
-fx["Symbol"] = info.Symbol[0]
-fx["CloseMid"] = (fx["CloseAsk"] + fx["CloseBid"]) / 2
-fx["HighMid"] = (fx["HighAsk"] + fx["HighBid"]) / 2
-fx["LowMid"] = (fx["LowAsk"] + fx["LowBid"]) / 2
-fx["OpenMid"] = (fx["OpenAsk"] + fx["OpenBid"]) / 2
-fx = fx[["Time", "Symbol", "CloseMid", "OpenMid", "HighMid", "LowMid"]]
-latest_fx = {fx["Symbol"][0]: []}
+from strategy import Strategy
+from event import SignalEvent
+from backtest import Backtest
+from data import HistoricDataHandler
+from execution import SimulatedExecutionHandler
+from portfolio import Portfolio
 
 
-def fake(symbol):
+class MovingAverageCrossStrategy(Strategy):
     """
-    param symbol: The ticker or FX pair of interest.
-    :return: Returns the latest bar from the data feed.
+    Carries out basic MA Crossover strategy with a short/long simple weighted moving average.
+    Default short/long periods are 100/400 periods respectively
+
+    bars - The DataHandler object that provides bar information
+    events - The Event Queue object.
+    short_window - The short moving average lookback.
+    long_window - The long moving average lookback.
     """
-    yield fx[-1:]
+
+    def __init__(self, bars, events, short_window=100, long_window=400):
+        """
+                Initializes the MA Crossover strategy.
+                """
+        self.bars = bars
+        self.symbol_list = self.bars.symbol_list
+        self.events = events
+        self.short_window = short_window
+        self.long_window = long_window
+
+        # set to True if a symbol is in the market
+        self.bought = self._calculate_initial_bought()
+
+    def _calculate_initial_bought(self):
+        """
+        Adds the keys to the bought dictionary for all symbols and set them to 'OUT'.
+        If the strategy begins out of the market we set the initial "bought" value to be "OUT".
+        """
+
+        bought = {}
+        for s in self.symbol_list:
+            bought[s] = 'OUT'
+        return bought
+
+    def calculate_signals(self, event):
+        """
+        Generates a new set of signal based on the MA.
+        """
+        if event.type == 'Market':
+            for s in self.symbol_list:
+                bars = self.bars.get_latest_bars_values(s, 'CloseAsk', N=self.long_window)
+                bar_date = self.bars.get_latest_bar_datetime(s)
+                if bars is not None and bars != []:
+                    short_sma = np.mean(bars[-self.short_window:])
+                    long_sma = np.mean(bars[-self.long_window:])
+
+                    symbol = s
+                    dt = datetime.datetime.utcnow()
+
+                    if short_sma > long_sma and self.bought[s] == "OUT":
+                        print("LONG: %s" % bar_date)
+                        sig_dir = "Buy"
+                        signal = SignalEvent(1, symbol=symbol, datetime=dt, signal_type=sig_dir, strength=1.0)
+                        self.events.put(signal)
+                        self.bought[s] = 'LONG'
+                    elif short_sma < long_sma and self.bought[s] == 'LONG':
+                        print('SHORT: %s' % bar_date)
+                        sig_dir = 'Sell'
+                        signal = SignalEvent(1, symbol=symbol, datetime=dt, signal_type=sig_dir, strength=1.0)
+                        self.events.put(signal)
+                        self.bought[s] = 'SHORT'
+        elif event.type == 'Limit':
+            pass
 
 
-a = fake(fx.Symbol)
-
-# Plot the forex overview
-forex_overview = begin.getGraph()
-
-# plot the candlestick
-eurusd = candlestick(begin.EURUSD, 'EURUSD spot, 15min')
-eurrub = candlestick(begin.EURRUB, 'EURRUB spot, 15min')
-xaueur = candlestick(begin.XAUEUR, 'XAUEUR Spot, 15min')
-
-# correlation
-
-# trade
-place = Order(1000.0, 21)
-first = place.newOrder("Buy", 1.05, "Limit")
-modify = place.changeExistingOrder(first, 1.09, "Market")
-cancel = place.cancelExistingOrder(first)
-
-first_order = newOrder(1000.0, "Buy", "Market", None, 21)
+if __name__ == '__main__':
+    symbol_list = ['EURUSD']
+    get_yf_fxdata = yf.download(tickers='EURUSD=X', start='2000-01-02', end='2023-02-04')
+    start_date = datetime.datetime(2000, 1, 1, 0, 0, 0)
+    get_yf_fxdata.index = pd.to_datetime(get_yf_fxdata.index)
+    initial_capital = 100000.0
+    heartbeat = 0.0
+    # TODO you need the data to run the backtest against
+    b = Backtest(api=get_yf_fxdata, symbol_list=symbol_list, initial_capital=initial_capital, heartbeat=heartbeat,
+                 start_date=start_date, data_handler=HistoricDataHandler,
+                 execution_handler=SimulatedExecutionHandler, portfolio=Portfolio, strategy=MovingAverageCrossStrategy)
+    b.simulate_trading()
