@@ -10,11 +10,12 @@ from event import MarketEvent
 # copy your (24-hour) token here
 import requests
 
-TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJvYWEiOiI3Nz" \
-        "c3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoiYVFrdHF2WC04UEdudzJQZWIzc0VLZz09IiwiY2lkIjoiYVFrdHF2WC04U" \
-        "EdudzJQZWIzc0VLZz09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiOTcwYTIzNzkwMTY2NDBhMDkwNmQ3OGJhMWEyOWV" \
-        "iNDEiLCJkZ2kiOiI4NCIsImV4cCI6IjE2ODMwNjQzOTMiLCJvYWwiOiIxRiIsImlpZCI6ImQ0OGE2YWNkMjUzNTQzNjU5YTA4MDhkYWVmZTZi" \
-        "YzRmIn0.A0bN9apuvICgCMZ2SRM6cJnxhTr84Zv2LsjvV6WEUziu8rqyFdziaIgnqchQIp-dCyWx2yUaBpqEDdCieX8sTg"
+TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJvY" \
+        "WEiOiI3Nzc3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoiYVFrdHF2WC04UEdudzJQZWIzc0VLZz09IiwiY2l" \
+        "kIjoiYVFrdHF2WC04UEdudzJQZWIzc0VLZz09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiMDdiOTJmN2I" \
+        "xOWEwNDI5ZTkwMjM3NTBjNzcxZWZmNDUiLCJkZ2kiOiI4NCIsImV4cCI6IjE2ODM3NTEyMjMiLCJvYWwiOiIxRiIsImlpZCI6I" \
+        "mQ0OGE2YWNkMjUzNTQzNjU5YTA4MDhkYWVmZTZiYzRmIn0.JhEzAviNoYQkNhKH4Re5RxTVbizYrbnKJDCJiDyWjrNdmBvs6GVdOG" \
+        "b3_D1XatAoZAnKcCoYdthDj7qVmCUxnQ"
 
 # create a random string for context ID and reference ID
 CONTEXT_ID = secrets.token_urlsafe(10)
@@ -143,7 +144,6 @@ class HistoricDataHandler(DataHandler):  # it inherits from DataHandler with its
         # yield self.symbol_data[-1:]
         for s in self.symbol_data[symbol]:
             yield s
-
     def get_latest_bar(self, symbol):
         """
         param symbol: The ticker or FX pair of interest.
@@ -180,7 +180,7 @@ class HistoricDataHandler(DataHandler):  # it inherits from DataHandler with its
             print("That symbol is not available in the historical data set.")
             raise
         else:
-            return bars_list.iloc[-1, 0]
+            return bars_list[-1][0]
 
     def get_latest_bar_value(self, symbol, val_type):
         """
@@ -194,7 +194,7 @@ class HistoricDataHandler(DataHandler):  # it inherits from DataHandler with its
             print("That symbol is not available in the historical data set.")
             raise
         else:
-            return getattr(bars_list[-1:], val_type)
+            return getattr(bars_list[-1][1], val_type)
 
     def get_latest_bars_values(self, symbol, val_type, N=1):
         """
@@ -209,7 +209,7 @@ class HistoricDataHandler(DataHandler):  # it inherits from DataHandler with its
             print("That symbol is not available in the historical data set.")
             raise
         else:
-            np.array([getattr(bars_list.iloc[N:1199:], val_type)])
+            return np.array([getattr(b[1], val_type) for b in bars_list])
 
     ## check this because it is not so obvious
 

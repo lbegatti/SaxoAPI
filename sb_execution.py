@@ -15,9 +15,7 @@ class SBExecutionHandler(ExecutionHandler):
     Handles order execution via Saxo Bank API.
     """
 
-    def __int__(self, events, order_routing='SMART', currency='USD'):
-        """Initializes the SBExecutionHandler instance"""
-
+    def __init__(self, events, order_routing='SMART', currency='USD'):
         self.events = events
         self.order_routing = order_routing
         self.currency = currency
@@ -25,7 +23,7 @@ class SBExecutionHandler(ExecutionHandler):
 
         # self.sb_conn = self.create_sb_connection()
         self.order_id = self.create_initial_order_id()
-        self.register_handlers()
+        # self.register_handlers()
 
     def _error_handler(self, msg):
         """
@@ -39,7 +37,7 @@ class SBExecutionHandler(ExecutionHandler):
         Handles server replies.
         """
         # Handles open order orderId processing
-        if msg.typeName == "openOrder" and msg.orderId == self.order_id and not self.fill_dict.has_key(msg.orderId):
+        if msg.typeName == "openOrder" and msg.orderId == self.order_id and msg.orderId not in self.fill_dict:
             self.create_fill_dict_entry(msg)
         # Handles fills order
         if msg.typeName == "orderStatus" and msg.status == "Filled" and not self.fill_dict[msg.orderId]['filled']:
@@ -58,12 +56,21 @@ class SBExecutionHandler(ExecutionHandler):
         """
         Create an Order object (market/limit) to go Long/Short
         """
-        order = Order(amount=quantity, uic=uic_id).newOrder(buysell=action, orderPrice=None, orderType=order_type)
-        order.m_orderType = order_type
-        order.m_totalQuantity = quantity
-        order.m_action = action
+        if order_type == 'Market':
+            order = Order(amount=quantity, uic=uic_id).newOrder(buysell=action, orderPrice=None, orderType=order_type)
+        elif order_type == 'Limit':
+            order = Order(amount=quantity, uic=uic_id).newOrder(buysell=action, orderPrice='1.05', orderType=order_type)
+        order_info = {
+            'order_type': order_type,
+            'totalQuantity': quantity,
+            'action': action
+        }
 
-        return order
+        # order.m_orderType = order_type
+        # order.m_totalQuantity = quantity
+        # order.m_action = action
+
+        return order_info
 
     def create_fill_dict_entry(self, msg):
         """
@@ -73,7 +80,7 @@ class SBExecutionHandler(ExecutionHandler):
         """
         self.fill_dict[msg.orderId] = {
             "uic_id": msg.order.uic,
-            'direction': msg.order.m_action,
+            'direction': msg.order_info['action'],
             'filled': False
         }
 
@@ -92,7 +99,7 @@ class SBExecutionHandler(ExecutionHandler):
 
         # create a fill event
 
-        fill_event = FillEvent(timeindex=datetime.datetime.utcnow(), symbol=uic_id, exchange=None, quantity=filled,
+        fill_event = FillEvent(timeindex=datetime.datetime.utcnow(), symbol=uic_id, quantity=filled,
                                direction=direction, fill_cost=fill_cost)
 
         # make sure multiple messages do not create additional fills
@@ -111,15 +118,31 @@ class SBExecutionHandler(ExecutionHandler):
         if event.type == 'ORDER':
             # prep the parameters for the order
             asset = event.symbol
+            search_uci = {
+                "AssetTypes": 'FxSpot',
+                "Keywords": asset,
+                "IncludeNonTradable": True
+            }
+            retrieve_info = requests.get("https://gateway.saxobank.com/sim/openapi/" + "ref/v1/instruments",
+                                         params=search_uci,
+                                         headers={'Authorization': 'Bearer ' + TOKEN})
+            searchOutput = retrieve_info.json()
+            info = pd.DataFrame.from_dict(searchOutput["Data"])
+            uci_id = int(info[info['Symbol'] == asset]['Identifier'][0])
+
             order_type = event.order_type
             quantity = event.quantity
             direction = event.direction
 
             # no contract needed here but just the request is embedded in the order
-            self.create_order(uic_id=asset, order_type=order_type, quantity=quantity, action=direction)
+            self.create_order(uic_id=uci_id, order_type=order_type, quantity=quantity, action=direction)
 
             # this ensures the order goes through
             time.sleep(1)
 
             # increment the order ID
             self.order_id += 1
+
+            fill_event = FillEvent(datetime.datetime.utcnow(), event.symbol, event.quantity, event.direction,
+                                   None)
+            self.events.put(fill_event)

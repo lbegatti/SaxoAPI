@@ -74,7 +74,7 @@ class Backtest(object):
                     break
                 else:
                     if event is not None:
-                        if event.type == "Market":
+                        if event.type == "MARKET":
                             self.strategy.calculate_signals(event)
                             self.portfolio.update_timeindex(event)
                         elif event.type == 'SIGNAL':

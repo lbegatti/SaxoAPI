@@ -1,28 +1,53 @@
 from download_data import *
 
-ClientKey = 'vJS9h8wkxd7a3YrJF9fo4w=='
+ClientKey = 'aQktqvX-8PGnw2Peb3sEKg=='
 AccountKey = ClientKey
 
 
 # these newOrder, changeOrder and cancelOrder are needed to modify or cancel ANY order as amount and other parameters
 ## are inputed directly, i.e. not part of a class
-def newOrder(amount: float, buysell: str, orderType: str, orderPrice: None, uic: int):
-    search = {
-        "AccountKey": AccountKey,
-        "Amount": amount,
-        "BuySell": buysell,
-        "OrderType": orderType,
-        "OrderPrice": orderPrice,
-        "ManualOrder": True,
-        "Uic": uic,
-        "AssetType": "FxSpot",  ## for now I can do only this one
-        "OrderDuration": {
-            "DurationType": "DayOrder"
+def newOrder(amount: float, buysell: str, orderType: str, uic: int, orderPrice=None):
+    if orderType == "Market":
+        market_order_params = {
+            "AccountKey": AccountKey,
+            "Amount": amount,
+            "BuySell": buysell,
+            "OrderType": orderType,
+            # "OrderPrice": orderPrice,
+            "ManualOrder": True,
+            "Uic": uic,
+            "AssetType": "FxSpot",  # for now, I can do only this one
+            "OrderDuration": {
+                "DurationType": "DayOrder"  # "GoodTillCancel" for Limit orders
+            },
+            "ExternalReference": secrets.token_urlsafe(16)
         }
-    }
-    order = requests.post("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
-                          headers={'Authorization': 'Bearer ' + TOKEN}, json=search)
-    out = order.json()
+        order = requests.post("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
+                              headers={'Authorization': 'Bearer ' + TOKEN}, json=market_order_params)
+        out = order.json()
+
+    elif orderType == "Limit":
+
+        limit_order_params = {
+            "AccountKey": AccountKey,
+            "Amount": amount,
+            "BuySell": buysell,
+            "OrderType": orderType,
+            "OrderPrice": orderPrice,
+            "ManualOrder": True,
+            "Uic": uic,
+            "AssetType": "FxSpot",  # for now, I can do only this one
+            "OrderDuration": {
+                "DurationType": "GoodTillCancel"  # "GoodTillCancel" for Limit orders
+            },
+            "ExternalReference": secrets.token_urlsafe(16)
+        }
+        order = requests.post("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
+                              headers={'Authorization': 'Bearer ' + TOKEN}, json=limit_order_params)
+        out = order.json()
+    else:
+        raise NotImplementedError('Supply an order type!!')
+
     if len(out) != 0:
         orderId = out["OrderId"]
         print("Order " + orderId + " placed successfully!")
@@ -32,7 +57,7 @@ def newOrder(amount: float, buysell: str, orderType: str, orderPrice: None, uic:
 
 
 def changeOrder(orderid: int, amount: float, orderPrice: float, orderType: str):
-    search = {
+    change_order = {
         "AccountKey": AccountKey,
         "Amount": amount,
         "AssetType": "FxSpot",
@@ -44,7 +69,7 @@ def changeOrder(orderid: int, amount: float, orderPrice: float, orderType: str):
         "OrderType": orderType
     }
     ch_order = requests.patch("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
-                              headers={'Authorization': 'Bearer ' + TOKEN}, json=search)
+                              headers={'Authorization': 'Bearer ' + TOKEN}, json=change_order)
     out = ch_order.json()
     if len(out) != 0:
         chOrderId = out["OrderId"]
@@ -55,12 +80,12 @@ def changeOrder(orderid: int, amount: float, orderPrice: float, orderType: str):
 
 
 def cancelOrder(orderid: str):
-    search = {
+    cancel_order = {
         "AccountKey": AccountKey
     }
 
     del_order = requests.delete("https://gateway.saxobank.com/sim/openapi/" + f"trade/v2/orders/{orderid}/",
-                                headers={'Authorization': 'Bearer ' + TOKEN}, params=search)
+                                headers={'Authorization': 'Bearer ' + TOKEN}, params=cancel_order)
     out = del_order.json()
     if len(out) != 0:
         delOrder = out["Orders"][0]['OrderId']
@@ -83,32 +108,58 @@ class Order:
         self.amount = amount
         self.uic = uic
 
-    def newOrder(self, buysell: str, orderPrice: None, orderType: str):
-        search = {
-            "AccountKey": AccountKey,
-            "Amount": self.amount,
-            "BuySell": buysell,
-            "OrderType": orderType,
-            "OrderPrice": orderPrice,
-            "ManualOrder": True,
-            "Uic": self.uic,
-            "AssetType": "FxSpot",  ## for now i can do only this one
-            "OrderDuration": {
-                "DurationType": "DayOrder"
+    def newOrder(self, buysell: str, orderType: str, orderPrice=None):
+
+        if orderType == "Market":
+            market_order_params = {
+                "AccountKey": AccountKey,
+                "Amount": self.amount,
+                "BuySell": buysell,
+                "OrderType": orderType,
+                # "OrderPrice": orderPrice,
+                "ManualOrder": True,
+                "Uic": self.uic,
+                "AssetType": "FxSpot",  # for now, I can do only this one
+                "OrderDuration": {
+                    "DurationType": "DayOrder"  # "GoodTillCancel" for Limit orders
+                },
+                "ExternalReference": secrets.token_urlsafe(16)
             }
-        }
-        order = requests.post("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
-                              headers={'Authorization': 'Bearer ' + TOKEN}, json=search)
-        out = order.json()
+            order = requests.post("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
+                                  headers={'Authorization': 'Bearer ' + TOKEN}, json=market_order_params)
+            out = order.json()
+
+        elif orderType == "Limit":
+
+            limit_order_params = {
+                "AccountKey": AccountKey,
+                "Amount": self.amount,
+                "BuySell": buysell,
+                "OrderType": orderType,
+                "OrderPrice": orderPrice,
+                "ManualOrder": True,
+                "Uic": self.uic,
+                "AssetType": "FxSpot",  # for now, I can do only this one
+                "OrderDuration": {
+                    "DurationType": "GoodTillCancel"  # "GoodTillCancel" for Limit orders
+                },
+                "ExternalReference": secrets.token_urlsafe(16)
+            }
+            order = requests.post("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
+                                  headers={'Authorization': 'Bearer ' + TOKEN}, json=limit_order_params)
+            out = order.json()
+        else:
+            raise NotImplementedError('Supply an order type!!')
+
         if len(out) != 0:
             orderId = out["OrderId"]
             print("Order " + orderId + " placed successfully!")
-            return orderId  # this is needed if you have to change the order
+            return orderId
         else:
             print("Order not placed successfully.")
 
     def changeExistingOrder(self, orderid: str, orderPrice: float, orderType: str):
-        search = {
+        change_order = {
             "AccountKey": AccountKey,
             "Amount": self.amount,
             "AssetType": "FxSpot",
@@ -120,7 +171,7 @@ class Order:
             "OrderType": orderType
         }
         ch_order = requests.patch("https://gateway.saxobank.com/sim/openapi/" + "trade/v2/orders",
-                                  headers={'Authorization': 'Bearer ' + TOKEN}, json=search)
+                                  headers={'Authorization': 'Bearer ' + TOKEN}, json=change_order)
         out = ch_order.json()
         if len(out) != 0:
             chOrderId = out["OrderId"]
@@ -130,11 +181,11 @@ class Order:
             print("Order not updated successfully.")
 
     def cancelExistingOrder(self, orderid: str):
-        search = {
+        cancel_existing_order_params = {
             "AccountKey": AccountKey
         }
         del_order = requests.delete("https://gateway.saxobank.com/sim/openapi/" + f"trade/v2/orders/{orderid}/",
-                                    headers={'Authorization': 'Bearer ' + TOKEN}, params=search)
+                                    headers={'Authorization': 'Bearer ' + TOKEN}, params=cancel_existing_order_params)
         out = del_order.json()
         if len(out) != 0:
             delOrder = out["Orders"][0]['OrderId']

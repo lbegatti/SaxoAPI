@@ -142,7 +142,7 @@ class Portfolio(object):
             fill_dir = -1
 
         # update holdings list with new quantities
-        fill_cost = self.bars.get_latest_bar_value(fill.symbol, "CloseMid")
+        fill_cost = self.bars.get_latest_bar_value(fill.symbol, "Adj Close")
         cost = fill_dir * fill_cost * fill.quantity
         self.current_holdings[fill.symbol] += cost
         self.current_holdings['commission'] += fill.commission
@@ -167,10 +167,10 @@ class Portfolio(object):
         """
         order = None
         symbol = signal.symbol
-        direction = signal.direction
+        direction = signal.signal_type
         strength = signal.strength
 
-        mkt_quantity = 10000  # 10,000 of the currency (it can be adjusted obviously)
+        mkt_quantity = 1000  # 10,000 of the currency (it can be adjusted obviously)
         cur_quantity = self.current_positions[symbol]
         order_type = "Market"
 

@@ -7,11 +7,13 @@ import secrets
 from plotly.subplots import make_subplots
 
 # copy your (24-hour) token here
-TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEyRjVCM0UzOTQifQ.eyJvYWEiO" \
-        "iI3Nzc3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoiWXw0VDl3Rk1HVzZrQ2cwME5WWTJ6QT09IiwiY2lkIjoiWXw0V" \
-        "Dl3Rk1HVzZrQ2cwME5WWTJ6QT09IiwiaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiNGJjY2JmNzNhNWEyNGNmY2ExOGIw" \
-        "NmFjYWE4MDkxZTciLCJkZ2kiOiI4NCIsImV4cCI6IjE2Njg3MTkxNDYiLCJvYWwiOiIxRiIsImlpZCI6IjBjZWQxYWZjYjFiYTQxM2Q1Mz" \
-        "EyMDhkYWM3YzFlZjI4In0.mrjrbhkoyya_BbD4FIhfM2KsC0FZawFGVOfeE-sHWs1rgYlpJgAxh_WSFv5LYrxXn-dsTeKLh3kM3Nq6ssMnPg"
+TOKEN = "eyJhbGciOiJFUzI1NiIsIng1dCI6IkRFNDc0QUQ1Q0NGRUFFRTlDRThCRDQ3ODlFRTZDOTEy" \
+        "RjVCM0UzOTQifQ.eyJvYWEiOiI3Nzc3NSIsImlzcyI6Im9hIiwiYWlkIjoiMTA5IiwidWlkIjoi" \
+        "YVFrdHF2WC04UEdudzJQZWIzc0VLZz09IiwiY2lkIjoiYVFrdHF2WC04UEdudzJQZWIzc0VLZz09Iiw" \
+        "iaXNhIjoiRmFsc2UiLCJ0aWQiOiIyMDAyIiwic2lkIjoiNmVkNjNmYWJjZDFjNDhkZjg2ZWUwMzNjNmQxNz" \
+        "A5MTYiLCJkZ2kiOiI4NCIsImV4cCI6IjE2ODM2Njg4MTQiLCJvYWwiOiIxRiIsImlpZCI6ImQ0OGE2YWNkMjUz" \
+        "NTQzNjU5YTA4MDhkYWVmZTZiYzRmIn0.ymFJBY2V2HwTk6Xnj_HBn2cUDBuCkcR4TGezrhc-8Fz2LBNXoliTDLX33" \
+        "bhDQh6BC-bk3kowIB6o4qgNbSeGrw"
 
 # create a random string for context ID and reference ID
 CONTEXT_ID = secrets.token_urlsafe(10)
@@ -54,9 +56,9 @@ class getFromApi:
 
         """
         self.search = None
-        self.assettype = assettype
+        self.asset_type = assettype
         self.keyword = keyword
-        self.isnontradable = isnontradable
+        self.is_nontradable = isnontradable
         self.uci = None
         self.rel_info = None
         self.pair1 = pair1

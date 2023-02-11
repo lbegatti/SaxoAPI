@@ -18,7 +18,7 @@ class MarketEvent(Event):
         """
         Initialize the market event.
         """
-        self.type = 'Market'
+        self.type = 'MARKET'
 
 
 class SignalEvent(Event):
@@ -69,7 +69,6 @@ class OrderEvent(Event):
     def print_order(self):
         """
         Outputs the values within the Order.
-        :return: order details
         """
         print(
             "Order: Symbol = %s, Type = %s, Quantity = %s, Direction = %s" % (self.symbol, self.type, self.quantity,
@@ -83,7 +82,7 @@ class FillEvent(Event):
     actually filled and at what price. In addition, stores the commission of the trade from the brokerage.
     """
 
-    def __init__(self, timeindex, symbol, exchange, quantity, direction, fill_cost, commission=None):
+    def __init__(self, timeindex, symbol, quantity, direction, fill_cost, commission=None):
         """
         Initialises the FillEvent object. Sets the symbol, exchange, quantity, direction, cost of fill and
         an optional commission. If commission is not provided, the Fill object will calculate it based on
@@ -100,7 +99,7 @@ class FillEvent(Event):
         self.type = 'FILL'
         self.timeindex = timeindex
         self.symbol = symbol
-        self.exchange = exchange
+        # self.exchange = exchange
         self.quantity = quantity
         self.direction = direction
         self.fill_cost = fill_cost
@@ -115,43 +114,3 @@ class FillEvent(Event):
         else:  # Greater than 500
             full_cost = max(1.3, 0.008 * self.quantity)
         return full_cost
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

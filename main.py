@@ -11,6 +11,7 @@ from backtest import Backtest
 from data import HistoricDataHandler
 from execution import SimulatedExecutionHandler
 from portfolio import Portfolio
+from sb_execution import SBExecutionHandler
 
 
 class MovingAverageCrossStrategy(Strategy):
@@ -24,7 +25,7 @@ class MovingAverageCrossStrategy(Strategy):
     long_window - The long moving average lookback.
     """
 
-    def __init__(self, bars, events, short_window=100, long_window=400):
+    def __init__(self, bars, events, short_window=1, long_window=2):
         """
                 Initializes the MA Crossover strategy.
                 """
@@ -52,11 +53,11 @@ class MovingAverageCrossStrategy(Strategy):
         """
         Generates a new set of signal based on the MA.
         """
-        if event.type == 'Market':
+        if event.type == 'MARKET':
             for s in self.symbol_list:
-                bars = self.bars.get_latest_bars_values(s, 'CloseAsk', N=self.long_window)
+                bars = self.bars.get_latest_bars_values(s, 'Adj Close', N=self.long_window)
                 bar_date = self.bars.get_latest_bar_datetime(s)
-                if bars is not None and bars != []:
+                if len(bars) > 0 and bars is not None:
                     short_sma = np.mean(bars[-self.short_window:])
                     long_sma = np.mean(bars[-self.long_window:])
 
@@ -65,17 +66,18 @@ class MovingAverageCrossStrategy(Strategy):
 
                     if short_sma > long_sma and self.bought[s] == "OUT":
                         print("LONG: %s" % bar_date)
-                        sig_dir = "Buy"
+                        sig_dir = "LONG"
                         signal = SignalEvent(1, symbol=symbol, datetime=dt, signal_type=sig_dir, strength=1.0)
                         self.events.put(signal)
                         self.bought[s] = 'LONG'
                     elif short_sma < long_sma and self.bought[s] == 'LONG':
                         print('SHORT: %s' % bar_date)
-                        sig_dir = 'Sell'
+                        sig_dir = 'SHORT'
                         signal = SignalEvent(1, symbol=symbol, datetime=dt, signal_type=sig_dir, strength=1.0)
                         self.events.put(signal)
                         self.bought[s] = 'SHORT'
         elif event.type == 'Limit':
+            # TODO: not set up the limit order.
             pass
 
 
@@ -84,7 +86,7 @@ if __name__ == '__main__':
     get_yf_fxdata = yf.download(tickers='EURUSD=X', start='2000-01-02', end='2023-02-04')
     start_date = datetime.datetime(2000, 1, 1, 0, 0, 0)
     get_yf_fxdata.index = pd.to_datetime(get_yf_fxdata.index)
-    initial_capital = 100000.0
+    initial_capital = 1000000.0
     heartbeat = 0.0
     # TODO you need the data to run the backtest against
     b = Backtest(api=get_yf_fxdata, symbol_list=symbol_list, initial_capital=initial_capital, heartbeat=heartbeat,
