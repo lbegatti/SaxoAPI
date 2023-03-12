@@ -6,6 +6,7 @@ from abc import ABCMeta, abstractmethod, ABC
 import pandas as pd
 import numpy as np
 from event import MarketEvent
+from forecast import get_lag_data
 
 # copy your (24-hour) token here
 import requests
@@ -121,7 +122,6 @@ class HistoricDataHandler(DataHandler):  # it inherits from DataHandler with its
         # set the latest symbol data to None (so it can be loaded afterwords)
 
         comb_index = None
-
         for s in self.symbol_list:
             # Combine the index to pad forward values
             self.symbol_data[s] = self.api.sort_index(ascending=False)
